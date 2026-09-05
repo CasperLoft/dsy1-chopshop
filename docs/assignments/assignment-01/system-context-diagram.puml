@@ -1,0 +1,18 @@
+@startuml
+!includeurl https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+title System Context Diagram for Slaughterhouse System
+
+LAYOUT_LEFT_RIGHT()
+
+System(chopShop, "Slaughterhouse System", "Automates animal arrival and weighing at Station 1. Provides traceability and recall across all stations. Stations record locally during outages and synchronise when connectivity returns.")
+
+Person(station2Operator, "Station 2 operator", "Cuts, weighs, registers, and trays animal parts.")
+Person(station3Operator, "Station 3 operator", "Packs products and records their source trays.")
+Person_Ext(recallOfficer, "External recall officer", "Finds affected products and performs recalls.")
+
+Rel_R(station2Operator, chopShop, "Registers parts and trays", "Direct")
+Rel_R(station3Operator, chopShop, "Registers products and source trays", "Direct")
+Rel_R(recallOfficer, chopShop, "Performs recalls", "Direct")
+
+@enduml

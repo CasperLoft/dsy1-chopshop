@@ -1,0 +1,47 @@
+@startuml
+title ChopShop Domain Model
+
+hide methods
+
+class Animal {
+    animalId
+    arrivalWeight
+    arrivalTimestamp
+}
+
+class AnimalPart {
+    partId
+    partCode
+    weight
+    processedTimestamp
+}
+
+class Tray {
+    trayRFID
+    maxWeight
+    /currentWeight
+}
+
+class Product {
+    productId
+    productType
+    packageDate
+    bestBeforeDate
+}
+
+class ProductComponent {
+    quantity
+}
+
+Animal "1" --> "0..*" AnimalPart : yields
+Tray "1" --> "0..*" AnimalPart : holds
+Product "1" *-- "1..*" ProductComponent : consists of
+ProductComponent "*" --> "1..*" Tray : uses parts from
+
+note right of Tray
+  All held AnimalParts must have
+  the same partCode.
+
+  currentWeight must not exceed maxWeight.
+end note
+@enduml
