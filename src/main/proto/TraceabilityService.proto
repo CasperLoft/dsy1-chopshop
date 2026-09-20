@@ -6,11 +6,11 @@ option java_package = "dk.dsy1.chopshop.grpc";
 option java_multiple_files = true;
 
 message AnimalRequest {
-  int64 animal_id = 1;
+  string ear_tag = 1;
 }
 
 message AnimalResponse {
-  int64 animal_id = 1;
+  string ear_tag = 1;
 }
 
 message AnimalsForProductResponse {
