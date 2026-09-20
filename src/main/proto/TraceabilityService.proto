@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package dk.dsy1.chopshop.traceability;
+
+option java_package = "dk.dsy1.chopshop.grpc";
+option java_multiple_files = true;
+
+message AnimalRequest {
+  int64 animal_id = 1;
+}
+
+message AnimalResponse {
+  int64 animal_id = 1;
+}
+
+message AnimalsForProductResponse {
+  repeated AnimalResponse animals = 1;
+}
+
+message ProductRequest {
+  int64 product_id = 1;
+}
+
+message ProductResponse {
+  int64 product_id = 1;
+  string product_type = 2;
+}
+
+message ProductsForAnimalResponse {
+  repeated ProductResponse products = 1;
+}
+
+service TraceabilityService {
+  rpc GetAnimalsForProduct(ProductRequest) returns (AnimalsForProductResponse);
+  rpc GetProductsForAnimal(AnimalRequest) returns (ProductsForAnimalResponse);
+}
