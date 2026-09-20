@@ -1,10 +1,12 @@
 ### IntelliJ IDEA ###
+target/
 out/
 !**/src/main/**/out/
 !**/src/test/**/out/
 .kotlin/
 .idea/
 *.iml
+*.pdf
 
 ### Eclipse ###
 .apt_generated
