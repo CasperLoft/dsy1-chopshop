@@ -1,5 +1,5 @@
 package dk.dsy1.chopshop.domain;
 
-public record AnimalPart(long id, long animalId)
-{
-}
+import java.util.UUID;
+
+public record AnimalPart(UUID id, UUID animalId) {}

@@ -18,11 +18,11 @@ message AnimalsForProductResponse {
 }
 
 message ProductRequest {
-  int64 product_id = 1;
+  string product_id = 1;
 }
 
 message ProductResponse {
-  int64 product_id = 1;
+  string product_id = 1;
   string product_type = 2;
 }
 
