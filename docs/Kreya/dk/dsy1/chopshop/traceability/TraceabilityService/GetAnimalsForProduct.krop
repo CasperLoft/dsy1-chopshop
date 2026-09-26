@@ -1,0 +1,13 @@
+{
+  "details": {
+    "methodFqn": "dk.dsy1.chopshop.traceability.TraceabilityService.GetAnimalsForProduct"
+  },
+  "requests": [
+    {
+      "location": "GetAnimalsForProduct-request.json"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "grpc",
+  "importStreamId": "d746a9b8-95a7-45cb-bc95-aa967e98489b"
+}
