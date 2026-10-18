@@ -1,0 +1,20 @@
+{
+  "details": {
+    "path": "",
+    "method": "GET",
+    "queryParams": [
+      {
+        "key": "origin",
+        "value": "Peperridge Farm"
+      }
+    ]
+  },
+  "requests": [
+    {
+      "contentType": "none"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "rest",
+  "typeHint": "GET"
+}

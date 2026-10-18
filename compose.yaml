@@ -1,5 +1,5 @@
 services:
-  postgres:
+  traceability-postgres:              # Previously: postgres
     image: postgres:18-alpine
     container_name: chopshop-postgres
     environment:
@@ -10,6 +10,18 @@ services:
       - "5433:5432"
     volumes:
       - chopshop_postgres_data:/var/lib/postgresql
+  registration-postgres:
+    image: postgres:18-alpine
+    container_name: chopshop-registration-postgres
+    environment:
+      POSTGRES_DB: registration
+      POSTGRES_USER: registration
+      POSTGRES_PASSWORD: registration
+    ports:
+      - "5434:5432"
+    volumes:
+      - registration_postgres_data:/var/lib/postgresql
 
 volumes:
   chopshop_postgres_data:
+  registration_postgres_data:

@@ -1,0 +1,13 @@
+{
+  "settings": [
+    {
+      "endpoint": "http://localhost:8081/registrations",
+      "disableServerCertificateValidation": true,
+      "options": {
+        "rest": {
+          "disableServerCertificateValidation": true
+        }
+      }
+    }
+  ]
+}

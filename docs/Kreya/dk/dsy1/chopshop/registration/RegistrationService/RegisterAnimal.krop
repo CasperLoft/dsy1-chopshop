@@ -1,0 +1,21 @@
+{
+  "details": {
+    "path": "",
+    "method": "POST",
+    "headers": [
+      {
+        "key": "Content-Type",
+        "value": "application/json"
+      }
+    ]
+  },
+  "requests": [
+    {
+      "location": "RegisterAnimal-request.json",
+      "contentType": "json"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "rest",
+  "typeHint": "POST"
+}

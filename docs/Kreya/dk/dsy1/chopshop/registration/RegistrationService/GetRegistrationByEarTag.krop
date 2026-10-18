@@ -1,0 +1,15 @@
+{
+  "details": {
+    "endpoint": "http://localhost:8081/registrations",
+    "path": "/DK-A1001",
+    "method": "GET"
+  },
+  "requests": [
+    {
+      "contentType": "none"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "rest",
+  "typeHint": "GET"
+}

@@ -1,0 +1,20 @@
+{
+  "details": {
+    "path": "",
+    "method": "GET",
+    "queryParams": [
+      {
+        "key": "arrivalDate",
+        "value": "2026-10-18"
+      }
+    ]
+  },
+  "requests": [
+    {
+      "contentType": "none"
+    }
+  ],
+  "operationType": "unary",
+  "invokerName": "rest",
+  "typeHint": "GET"
+}
