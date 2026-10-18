@@ -72,7 +72,7 @@
                 <directory>src/test/resources</directory>
             </testResource>
             <testResource>
-                <directory>database</directory>
+                <directory>${project.basedir}/../database</directory>
                 <includes>
                     <include>*.sql</include>
                 </includes>

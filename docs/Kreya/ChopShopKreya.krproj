@@ -8,7 +8,7 @@
       "createMissingOperations": true,
       "options": {
         "files": [
-          "../../src/main/proto"
+          "../../TraceabilityService/src/main/proto"
         ],
         "importPaths": [],
         "excludedFiles": []
