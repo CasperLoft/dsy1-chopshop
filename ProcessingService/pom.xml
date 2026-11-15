@@ -75,6 +75,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <configuration>
+                    <mainClass>dk.dsy1.chopshop.processing.ProcessingServiceApplication</mainClass>
+                </configuration>
             </plugin>
         </plugins>
     </build>

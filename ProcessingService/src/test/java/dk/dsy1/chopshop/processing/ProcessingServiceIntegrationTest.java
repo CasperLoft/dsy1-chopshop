@@ -45,6 +45,20 @@ class ProcessingServiceIntegrationTest {
     private int add(String content) throws Exception {
         return mvc.perform(post("/parts").contentType(APPLICATION_JSON).content(content)).andReturn().getResponse().getStatus();
     }
+    @Test
+    void dashboardOriginIsAllowedButOtherOriginsAreRejected() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/parts")
+                .header("Origin", "http://localhost:8000")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "content-type"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Origin", "http://localhost:8000"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/parts")
+                .header("Origin", "http://example.com")
+                .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isForbidden());
+    }
+
     @Test void createsAndReadsPersistedTrayAndParts() throws Exception {
         tray("tray-1", 10);
         mvc.perform(post("/parts").contentType(APPLICATION_JSON).content(part("leg", "3.25", "tray-1")))

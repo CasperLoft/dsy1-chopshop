@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.UUID;
 
+@org.springframework.web.bind.annotation.CrossOrigin(origins = "http://localhost:8000", methods = {org.springframework.web.bind.annotation.RequestMethod.GET, org.springframework.web.bind.annotation.RequestMethod.POST})
 @RestController
 public class PackagingController {
     private final PackagingService service;

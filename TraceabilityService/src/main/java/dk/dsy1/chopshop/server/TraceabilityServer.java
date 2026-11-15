@@ -23,6 +23,7 @@ public final class TraceabilityServer {
         TraceabilityRepository repository = new TraceabilityRepository(connectionProvider);
         TraceabilityQueryService queryService = new TraceabilityQueryService(repository);
 
+        var http = new dk.dsy1.chopshop.http.TraceabilityHttpServer(queryService, 8084);
         var consumer = new dk.dsy1.chopshop.messaging.TraceabilityConsumer(connectionProvider);
         consumer.start();
 
@@ -31,8 +32,9 @@ public final class TraceabilityServer {
                 .build()
                 .start();
 
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> { consumer.close(); server.shutdown(); }));
-        System.out.printf("Traceability gRPC Service started on port %d%n", PORT);
+        http.start();
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> { http.close(); consumer.close(); server.shutdown(); }));
+        System.out.printf("Traceability gRPC Service started on port %d; dashboard HTTP on 127.0.0.1:8084%n", PORT);
         server.awaitTermination();
     }
 }

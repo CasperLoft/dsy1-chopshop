@@ -4,6 +4,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
+@org.springframework.web.bind.annotation.CrossOrigin(origins = "http://localhost:8000", methods = {org.springframework.web.bind.annotation.RequestMethod.GET, org.springframework.web.bind.annotation.RequestMethod.POST})
 @RestController
 public class ProcessingController {
     private final ProcessingService service;

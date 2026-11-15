@@ -32,3 +32,5 @@ bin/
 
 ### Mac OS ###
 .DS_Store
+# Generated local Traceability classpath
+/TraceabilityService/cp.txt

@@ -42,6 +42,7 @@ class TraceabilityServiceIntegrationTest {
             new org.testcontainers.containers.GenericContainer<>("rabbitmq:4-management").withExposedPorts(5672)
                 .waitingFor(org.testcontainers.containers.wait.strategy.Wait.forLogMessage(".*Server startup complete.*\\n", 1));
 
+    private static dk.dsy1.chopshop.http.TraceabilityHttpServer http;
     private static Server server;
     private static ManagedChannel channel;
     private static TraceabilityServiceGrpc.TraceabilityServiceBlockingStub client;
@@ -54,6 +55,8 @@ class TraceabilityServiceIntegrationTest {
         ConnectionProvider connectionProvider = () -> POSTGRES.createConnection("");
         TraceabilityRepository repository = new TraceabilityRepository(connectionProvider);
         TraceabilityQueryService queryService = new TraceabilityQueryService(repository);
+        http = new dk.dsy1.chopshop.http.TraceabilityHttpServer(queryService, 0);
+        http.start();
         server = ServerBuilder.forPort(0)
                 .addService(new TraceabilityServiceImpl(queryService))
                 .build()
@@ -66,6 +69,7 @@ class TraceabilityServiceIntegrationTest {
 
     @AfterAll
     static void stopService() {
+        if (http != null) http.close();
         if (channel != null) {
             channel.shutdownNow();
         }
@@ -129,6 +133,44 @@ class TraceabilityServiceIntegrationTest {
                 ProductRequest.newBuilder().setProductId(product).build()).getAnimalsList().stream().map(AnimalResponse::getEarTag).toList());
         assertIterableEquals(java.util.List.of(product), client.getProductsForAnimal(
                 AnimalRequest.newBuilder().setEarTag("event-ear-tag").build()).getProductsList().stream().map(ProductResponse::getProductId).toList());
+    }
+
+    @Test
+    void dashboardHttpQueriesAndOriginRestrictions() throws Exception {
+        var httpClient = java.net.http.HttpClient.newHttpClient();
+        var productRequest = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:" + http.port() + "/traceability/animals?productId=" + PRODUCT_ONE))
+                .header("Origin", "http://localhost:8000").GET().build();
+        var productResponse = httpClient.send(productRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
+        assertEquals(200, productResponse.statusCode());
+        assertEquals("http://localhost:8000", productResponse.headers().firstValue("Access-Control-Allow-Origin").orElseThrow());
+        var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        var animals = mapper.readTree(productResponse.body()).get("animals");
+        assertEquals("DK-A1001", animals.get(0).asText());
+        assertEquals("DK-B2002", animals.get(1).asText());
+        var animalResponse = getHttp(httpClient, "/traceability/products?earTag=DK-A1001", "http://localhost:8000");
+        assertEquals(200, animalResponse.statusCode());
+        assertEquals(2, mapper.readTree(animalResponse.body()).get("products").size());
+        assertEquals(400, getHttp(httpClient, "/traceability/animals?productId=bad", null).statusCode());
+        assertEquals(400, getHttp(httpClient, "/traceability/products?earTag=%20", null).statusCode());
+        assertEquals(404, getHttp(httpClient, "/traceability/products?earTag=NOT-FOUND", null).statusCode());
+        assertEquals(403, getHttp(httpClient, "/traceability/products?earTag=DK-A1001", "http://example.com").statusCode());
+    }
+
+    @Test
+    void dashboardHttpReturnsEmptyListForUnlinkedAnimal() throws Exception {
+        try (Connection connection = POSTGRES.createConnection("");
+             var statement = connection.prepareStatement("INSERT INTO animals (id, ear_tag) VALUES (?, ?)")) {
+            statement.setObject(1, UUID.randomUUID()); statement.setString(2, "DK-HTTP-UNLINKED"); statement.executeUpdate();
+        }
+        var result = getHttp(java.net.http.HttpClient.newHttpClient(), "/traceability/products?earTag=DK-HTTP-UNLINKED", null);
+        assertEquals(200, result.statusCode());
+        assertEquals(0, new com.fasterxml.jackson.databind.ObjectMapper().readTree(result.body()).get("products").size());
+    }
+
+    private static java.net.http.HttpResponse<String> getHttp(java.net.http.HttpClient client, String path, String origin) throws Exception {
+        var builder = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:" + http.port() + path)).GET();
+        if (origin != null) builder.header("Origin", origin);
+        return client.send(builder.build(), java.net.http.HttpResponse.BodyHandlers.ofString());
     }
 
     @Test

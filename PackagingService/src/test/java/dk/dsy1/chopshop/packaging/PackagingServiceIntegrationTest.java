@@ -53,6 +53,20 @@ class PackagingServiceIntegrationTest {
     }
 
     @Test
+    void dashboardOriginIsAllowedButOtherOriginsAreRejected() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/products")
+                .header("Origin", "http://localhost:8000")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "content-type"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Origin", "http://localhost:8000"));
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/products")
+                .header("Origin", "http://example.com")
+                .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void createsAndRetrievesProductWithMultipleTrays() throws Exception {
         String response = mvc.perform(post("/products").contentType(APPLICATION_JSON)
                         .content("{\"productType\":\"half animal\",\"trayRfids\":[\"TRAY-B\",\"TRAY-A\"]}"))

@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.*;
 import java.time.LocalDate;
 import java.util.List;
 
+@org.springframework.web.bind.annotation.CrossOrigin(origins = "http://localhost:8000", methods = {org.springframework.web.bind.annotation.RequestMethod.GET, org.springframework.web.bind.annotation.RequestMethod.POST})
 @RestController
 @RequestMapping("/registrations")
 public class RegistrationController

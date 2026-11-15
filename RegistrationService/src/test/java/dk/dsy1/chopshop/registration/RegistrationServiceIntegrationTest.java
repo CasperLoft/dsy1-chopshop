@@ -57,6 +57,20 @@ class RegistrationServiceIntegrationTest {
     }
 
     @Test
+    void dashboardOriginIsAllowedButOtherOriginsAreRejected() throws Exception {
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/registrations")
+                .header("Origin", "http://localhost:8000")
+                .header("Access-Control-Request-Method", "POST")
+                .header("Access-Control-Request-Headers", "content-type"))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Origin", "http://localhost:8000"));
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/registrations")
+                .header("Origin", "http://example.com")
+                .header("Access-Control-Request-Method", "POST"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
     void postRegistrationCreatesAndPersistsAnAnimal() throws Exception {
         RegistrationRequest request = new RegistrationRequest(
                 "DK-POST-001", LocalDate.of(2026, 10, 18), 525.5, "Peperridge Farm"

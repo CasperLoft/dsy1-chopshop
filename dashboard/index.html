@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A local dashboard for demonstrating the ChopShop station workflow.">
+  <title>ChopShop | Station dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#top" aria-label="ChopShop dashboard home"><span class="brand-mark">C<span>.</span></span><span>CHOPSHOP <small>STATION DASHBOARD</small></span></a>
+    <div class="top-actions"><span class="session-label"><span class="live-dot"></span> LOCAL SESSION</span><a class="broker-link" href="http://localhost:15672" target="_blank" rel="noopener noreferrer">RabbitMQ <span aria-hidden="true">↗</span></a><button id="reset" class="reset" type="button">New demo <span aria-hidden="true">↻</span></button></div>
+  </header>
+  <main id="top">
+    <div class="intro"><div><div class="eyebrow"><span></span> SLAUGHTERHOUSE OPERATIONS <span class="slash">/</span> LIVE DEMO</div><h1>From arrival<br><em>to distribution.</em></h1><p>Follow an animal through each station. Register the arrival, process its parts, and package the finished product.</p></div></div>
+    <nav class="tabs" role="tablist" aria-label="Dashboard views">
+      <button id="station-tab" role="tab" aria-selected="true" aria-controls="station-panel" tabindex="0" type="button">Station Flow</button>
+      <button id="trace-tab" role="tab" aria-selected="false" aria-controls="trace-panel" tabindex="-1" type="button">Traceability</button>
+    </nav>
+    <div id="station-panel" role="tabpanel" aria-labelledby="station-tab">
+    <section class="overview" aria-label="Demo progress"><div><span>01</span> <strong>Register</strong><small id="animal-count">0 animals</small></div><i>→</i><div><span>02</span> <strong>Process</strong><small id="tray-count">0 trays</small></div><i>→</i><div><span>03</span> <strong>Package</strong><small id="product-count">0 products</small></div><div class="overview-end">YOUR CURRENT SESSION <span>●</span></div></section>
+    <section class="stations" aria-label="Station operations">
+      <article class="station" id="registration"><header class="station-head"><div class="station-index">01</div><div><div class="station-kicker">FIRST STATION</div><h2>Registration</h2><p>Record an animal's arrival.</p></div><div class="station-symbol" aria-hidden="true">↘</div></header>
+        <form id="animal-form"><div class="form-title"><span>ANIMAL DETAILS</span><span class="optional">ALL FIELDS REQUIRED</span></div><label>Ear tag<input name="earTag" maxlength="50" required></label><div class="grid-two"><label>Arrival date<input name="arrivalDate" type="date" required></label><label>Weight <span class="unit">KG</span><input name="weight" type="number" min="0.01" step="any" required></label></div><label>Origin<input name="origin" maxlength="255" required value="Example Farm"></label><button class="submit" type="submit">Register animal <span>↗</span></button><p class="feedback" role="status" aria-live="polite"></p></form>
+        <div class="records"><div class="records-head"><span>REGISTERED ANIMALS</span><span class="pill" id="animal-badge">0</span></div><div id="animals" class="record-list"><p class="empty">No animals registered yet.</p></div></div>
+      </article>
+      <article class="station" id="processing"><header class="station-head"><div class="station-index">02</div><div><div class="station-kicker">SECOND STATION</div><h2>Processing</h2><p>Prepare trays and register parts.</p></div><div class="station-symbol" aria-hidden="true">⌁</div></header>
+        <form id="tray-form"><div class="form-title"><span>CREATE A TRAY</span><span class="optional">STEP 01</span></div><div class="grid-two"><label>Tray RFID<input name="rfid" maxlength="100" required></label><label>Capacity <span class="unit">KG</span><input name="maxWeight" type="number" min="0.01" step="any" value="10" required></label></div><button class="submit secondary" type="submit">Create tray <span>+</span></button><p class="feedback" role="status" aria-live="polite"></p></form>
+        <form id="part-form" class="part-form"><div class="form-title"><span>ADD A PART</span><span class="optional">STEP 02</span></div><div class="grid-two"><label>Animal<select name="animalId" required><option value="">Register an animal first</option></select></label><label>Tray<select name="trayRfid" required><option value="">Create a tray first</option></select></label></div><div class="grid-two"><label>Part type<input name="partType" value="leg" maxlength="100" required></label><label>Weight <span class="unit">KG</span><input name="weight" type="number" min="0.01" step="any" value="2.5" required></label></div><button class="submit" type="submit">Add part to tray <span>↗</span></button><p class="feedback" role="status" aria-live="polite"></p></form>
+        <div class="records"><div class="records-head"><span>YOUR TRAYS</span><span class="pill" id="tray-badge">0</span></div><div id="trays" class="record-list"><p class="empty">No trays created yet.</p></div></div>
+      </article>
+      <article class="station" id="packaging"><header class="station-head"><div class="station-index">03</div><div><div class="station-kicker">THIRD STATION</div><h2>Packaging</h2><p>Prepare products for distribution.</p></div><div class="station-symbol" aria-hidden="true">◇</div></header>
+        <form id="product-form"><div class="form-title"><span>PRODUCT DETAILS</span><span class="optional">ALL FIELDS REQUIRED</span></div><label>Product type<input name="productType" maxlength="100" value="Packaged cuts" required></label><fieldset><legend>Source trays <span>SELECT ONE OR MORE</span></legend><div id="tray-choices" class="tray-choices"><p class="empty">Create a tray in processing first.</p></div></fieldset><button class="submit" type="submit">Create product <span>↗</span></button><p class="feedback" role="status" aria-live="polite"></p></form>
+        <div class="records"><div class="records-head"><span>PACKAGED PRODUCTS</span><span class="pill" id="product-badge">0</span></div><div id="products" class="record-list"><p class="empty">No products packaged yet.</p></div></div>
+      </article>
+    </section>
+    </div>
+    <section id="trace-panel" role="tabpanel" aria-labelledby="trace-tab" hidden>
+      <div class="trace-intro"><div class="eyebrow">TRACEABILITY <span class="slash">/</span> RECALL</div><h2>Follow the trail.</h2><p>Find products linked to an animal, or animals linked to a product. New records may take a few seconds to appear while events are delivered.</p></div>
+      <div class="trace-grid">
+        <article class="station trace-card"><header class="station-head"><div class="station-index">01</div><div><div class="station-kicker">ANIMAL → PRODUCTS</div><h2>Recall by animal</h2><p>Find products that may contain parts of an animal.</p></div></header>
+          <form id="animal-search"><label>Animal from this session<select name="animalSelection"><option value="">Enter an ear tag instead</option></select></label><label>Ear tag<input name="earTag" required maxlength="50" placeholder="e.g. DK-A1001"></label><button class="submit" type="submit">Find products <span>↗</span></button><p class="feedback" role="status" aria-live="polite"></p></form><div class="records"><div class="records-head">RESULTS</div><div id="animal-results" class="record-list" aria-live="polite"><p class="empty">Search for an animal to see linked products.</p></div></div>
+        </article>
+        <article class="station trace-card"><header class="station-head"><div class="station-index">02</div><div><div class="station-kicker">PRODUCT → ANIMALS</div><h2>Trace a product</h2><p>Find animals linked to a product's source trays.</p></div></header>
+          <form id="product-search"><label>Product from this session<select name="productSelection"><option value="">Enter a product ID instead</option></select></label><label>Product UUID<input name="productId" required placeholder="e.g. 00000000-0000-0000-0000-000000000031"></label><button class="submit" type="submit">Find animals <span>↗</span></button><p class="feedback" role="status" aria-live="polite"></p></form><div class="records"><div class="records-head">RESULTS</div><div id="product-results" class="record-list" aria-live="polite"><p class="empty">Search for a product to see linked animals.</p></div></div>
+        </article>
+      </div><p class="trace-note">Results are based on source trays and can include animals whose parts were not used in the specific product.</p>
+    </section>
+    <footer><div><span class="footer-mark">C<span>.</span></span> CHOPSHOP <span class="footer-muted">/ DISTRIBUTED SYSTEMS DEMO</span></div><p>Changes are saved by each station. Dashboard selections last until refresh or a new demo.</p></footer>
+  </main>
+</body>
+</html>
