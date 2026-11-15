@@ -10,9 +10,10 @@ import java.util.UUID;
 
 @Service
 public class ProcessingService {
+    private final dk.dsy1.chopshop.processing.messaging.Outbox outbox;
     private final TrayRepository trays;
     private final AnimalPartRepository parts;
-    public ProcessingService(TrayRepository trays, AnimalPartRepository parts) { this.trays = trays; this.parts = parts; }
+    public ProcessingService(TrayRepository trays, AnimalPartRepository parts, dk.dsy1.chopshop.processing.messaging.Outbox outbox) { this.trays = trays; this.parts = parts; this.outbox = outbox; }
 
     public record CreateTray(String rfid, BigDecimal maxWeight) {}
     public record CreatePart(UUID animalId, String partType, BigDecimal weight, String trayRfid) {}
@@ -44,6 +45,7 @@ public class ProcessingService {
             throw conflict("Tray capacity exceeded");
         if (tray.getPartType() == null) tray.setPartType(request.partType());
         AnimalPart part = parts.save(new AnimalPart(UUID.randomUUID(), request.animalId(), request.partType(), request.weight(), tray));
+        outbox.add("part.registered", java.util.Map.of("partId", part.getId().toString(), "animalId", request.animalId().toString(), "trayRfid", tray.getRfid()));
         return partView(part, tray.getRfid());
     }
 

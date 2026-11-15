@@ -30,3 +30,9 @@ CREATE TABLE product_trays (
                                tray_id UUID NOT NULL REFERENCES trays(id),
                                PRIMARY KEY (product_id, tray_id)
 );
+
+-- Independent event projections allow events from different stations to arrive in any order.
+CREATE TABLE IF NOT EXISTS event_animals (id UUID PRIMARY KEY, ear_tag VARCHAR(50) NOT NULL UNIQUE);
+CREATE TABLE IF NOT EXISTS event_parts (id UUID PRIMARY KEY, animal_id UUID NOT NULL, tray_rfid VARCHAR(100) NOT NULL);
+CREATE TABLE IF NOT EXISTS event_products (id UUID PRIMARY KEY, product_type VARCHAR(100) NOT NULL);
+CREATE TABLE IF NOT EXISTS event_product_trays (product_id UUID NOT NULL, tray_rfid VARCHAR(100) NOT NULL, PRIMARY KEY(product_id, tray_rfid));

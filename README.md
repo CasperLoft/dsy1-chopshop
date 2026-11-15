@@ -11,7 +11,7 @@ ChopShop is organised as independent services in one repository. Each service ha
 
 ## Local databases
 
-Docker Compose starts the PostgreSQL databases:
+Docker Compose starts the PostgreSQL databases and RabbitMQ:
 
 ```bash
 docker compose up -d
@@ -25,12 +25,14 @@ docker compose ps
 | `processing-postgres` | `processing` | `processing` | `5435` | Trays and animal parts |
 | `packaging-postgres` | `packaging` | `packaging` | `5436` | Products and source tray references |
 
-Initialise Traceability's schema and development data from the repository root:
+Initialise Traceability's schema from the repository root (the second command optionally loads the earlier sample data):
 
 ```bash
 docker compose exec -T traceability-postgres psql -U chopshop -d chopshop < database/schema.sql
 docker compose exec -T traceability-postgres psql -U chopshop -d chopshop < database/test-data.sql
 ```
+
+For a fresh demonstration, initialise Traceability using the schema command above, but omit `database/test-data.sql`. On an existing Traceability database, apply only the four `event_*` table definitions at the end of `database/schema.sql`; the full schema is not a migration. Existing station records and seed registrations do not generate events automatically.
 
 RegistrationService manages its own `animals` table. When the Spring Boot application starts, it connects to PostgreSQL on port `5434`, executes `RegistrationService/src/main/resources/schema.sql`, and loads the sample registrations in `RegistrationService/src/main/resources/data.sql`.
 
@@ -52,7 +54,7 @@ cd TraceabilityService
 mvn test
 ```
 
-`mvn test` uses Testcontainers, so Docker Desktop must be running.
+`mvn test` uses PostgreSQL and RabbitMQ Testcontainers, so Docker Desktop must be running.
 
 To compile and start the gRPC server from the command line:
 
@@ -150,7 +152,7 @@ Then register a part with the UUID returned by animal registration:
 {"animalId":"377805d4-df37-4b24-aa1f-cf1e39927fc5","partType":"leg","weight":3.25,"trayRfid":"TRAY-001"}
 ```
 
-The first part sets the tray's type. A different type, an over-capacity addition, or a duplicate RFID returns `409 Conflict`; missing values and nonpositive weights return `400 Bad Request`. The service uses decimal weights and serializes concurrent additions to a tray. Animal IDs are external references: the service does not validate them against registration or synchronize parts to traceability yet, so station 2 can keep working independently of those services.
+The first part sets the tray's type. A different type, an over-capacity addition, or a duplicate RFID returns `409 Conflict`; missing values and nonpositive weights return `400 Bad Request`. The service uses decimal weights and serializes concurrent additions to a tray. Animal IDs are external references: the service does not validate them against registration, so station 2 can keep working independently. Registered parts are sent to traceability asynchronously.
 
 Run `./mvnw test` in `ProcessingService/` with Docker running. The PostgreSQL integration tests cover registration, lookup, validation, tray rules and concurrent additions. See the [station 2 component diagram](docs/assignments/assignment-03_5/C3_component_diagram_processingService_V1.svg) for the current architecture.
 
@@ -172,6 +174,26 @@ Register a product with `POST http://localhost:8083/products`:
 
 A nonblank product type and at least one distinct, nonblank tray RFID are required; values may contain at most 100 characters. Invalid requests return `400 Bad Request`. The response returns tray RFIDs in sorted order. Multiple products can reference the same tray.
 
-Tray RFIDs are external references supplied by the operator. Packaging does not check them against ProcessingService, track quantities, or synchronize products to TraceabilityService yet. After synchronization is implemented, tray-level recall may include animals whose parts were in a source tray but were not actually used in a specific product.
+Tray RFIDs are external references supplied by the operator. Packaging does not check them against ProcessingService or track quantities. Products are sent to traceability asynchronously. Tray-level recall may include animals whose parts were in a source tray but were not actually used in a specific product.
 
-Run `./mvnw test` in `PackagingService/` with Docker running. The PostgreSQL integration tests cover creation, persistence, lookup, validation, and reuse of tray references. See the [station 3 component diagram](docs/assignments/assignment-03_5/C3_component_diagram_packagingService_V1.svg).
+Run `./mvnw test` in `PackagingService/` with Docker running. The integration tests cover creation, persistence, lookup, validation, reuse of tray references, and RabbitMQ outbox delivery after a failed attempt. See the [station 3 component diagram](docs/assignments/assignment-03_5/C3_component_diagram_packagingService_V1.svg).
+
+
+## Assignment 4: RabbitMQ and traceability
+
+See the [container diagram source](docs/assignments/assignment-04/container-diagram.puml). Each station commits its operation and a JSON event to its own PostgreSQL `event_outbox` in one transaction. Every five seconds the station sends pending events to the durable `chopshop.events` direct exchange, routed to the durable `chopshop.traceability` queue. Messages are persistent; a station deletes an outbox row only after RabbitMQ confirms publication. If the broker is unavailable, the station continues accepting work and retries later.
+
+Traceability consumes and commits events to independent projection tables before acknowledging them. Duplicate deliveries are harmless and records can arrive in any order. A crash between confirmation and deleting an outbox row can cause duplicate delivery, which is why idempotency matters. A malformed event or persistent database error remains unacknowledged and is retried; inspect the Traceability console if synchronization stops. This teaching implementation does not provide a dead-letter queue or monitoring.
+
+Queries are **eventually consistent**: results can be temporarily incomplete while events are pending, and a newly created animal or product may briefly return not found. If an operator supplies an incorrect animal UUID or tray RFID, no synchronous validation catches it and traceability can remain incomplete. Tray-level recall is conservative: a product can be associated with every animal whose parts were ever registered in a source tray, even if a particular part was not actually used.
+
+RabbitMQ is available locally at `localhost:5672`; its management UI is at http://localhost:15672 (development credentials `guest` / `guest`). Each application supports `RABBITMQ_HOST`, `RABBITMQ_PORT`, `RABBITMQ_USER`, and `RABBITMQ_PASSWORD`. Start the three Spring applications and the Traceability gRPC server as described above. The broker and local database for a station are separate: the station can tolerate the broker/network being down, but its own database must be available.
+
+### End-to-end demonstration
+
+1. Start Compose, initialize the fresh Traceability schema, and start all four services.
+2. POST the animal example above to `/registrations` and copy its returned `id`.
+3. POST `{"rfid":"DEMO-TRAY","maxWeight":10}` to `/trays`, then POST a part to `/parts` with that animal UUID, `partType` `leg`, `weight` 3, and `trayRfid` `DEMO-TRAY`.
+4. POST `{"productType":"cuts","trayRfids":["DEMO-TRAY"]}` to `/products` and copy the returned product `id`.
+5. After the events have been delivered, call `GetAnimalsForProduct` with that product ID and `GetProductsForAnimal` with the animal's ear tag using Kreya. Both should show the relationship.
+6. To demonstrate recovery, run `docker compose stop rabbitmq`, register another animal, and inspect its station's `event_outbox`. Run `docker compose start rabbitmq`; after retry, the row disappears and the animal becomes available to traceability. Repeat the part and product steps as needed to demonstrate a complete recall.

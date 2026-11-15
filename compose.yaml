@@ -1,4 +1,11 @@
 services:
+  rabbitmq:
+    image: rabbitmq:4-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
   traceability-postgres:              # Previously: postgres
     image: postgres:18-alpine
     container_name: chopshop-postgres
@@ -47,6 +54,7 @@ services:
       - packaging_postgres_data:/var/lib/postgresql
 
 volumes:
+  rabbitmq_data:
   chopshop_postgres_data:
   registration_postgres_data:
   processing_postgres_data:

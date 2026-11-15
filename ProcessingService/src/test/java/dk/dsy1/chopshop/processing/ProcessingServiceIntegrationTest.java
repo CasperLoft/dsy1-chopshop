@@ -19,7 +19,7 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(properties = "chopshop.outbox.delay=3600000")
 @AutoConfigureMockMvc
 @Testcontainers
 class ProcessingServiceIntegrationTest {
@@ -34,7 +34,7 @@ class ProcessingServiceIntegrationTest {
     @Autowired JdbcTemplate jdbc;
     private final UUID animal = UUID.fromString("377805d4-df37-4b24-aa1f-cf1e39927fc5");
 
-    @BeforeEach void clear() { jdbc.update("DELETE FROM animal_parts"); jdbc.update("DELETE FROM trays"); }
+    @BeforeEach void clear() { jdbc.update("DELETE FROM event_outbox"); jdbc.update("DELETE FROM animal_parts"); jdbc.update("DELETE FROM trays"); }
     private String part(String type, String weight, String tray) {
         return "{\"animalId\":\"" + animal + "\",\"partType\":\"" + type + "\",\"weight\":" + weight + ",\"trayRfid\":\"" + tray + "\"}";
     }
@@ -54,6 +54,7 @@ class ProcessingServiceIntegrationTest {
                 .andExpect(jsonPath("$.maxWeight").value(10)).andExpect(jsonPath("$.currentWeight").value(3.25))
                 .andExpect(jsonPath("$.parts.length()").value(1)).andExpect(jsonPath("$.parts[0].animalId").value(animal.toString()));
         assertEquals(animal, jdbc.queryForObject("SELECT animal_id FROM animal_parts", UUID.class));
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM event_outbox WHERE event_type = ? AND payload::jsonb ->> 'trayRfid' = ?", Integer.class, "part.registered", "tray-1"));
     }
     @Test void enforcesTypeCapacityAndAllowsExactCapacity() throws Exception {
         tray("tray-2", 10);
@@ -61,6 +62,7 @@ class ProcessingServiceIntegrationTest {
         assertEquals(409, add(part("wing", "1", "tray-2")));
         assertEquals(409, add(part("leg", "3.51", "tray-2")));
         assertEquals(201, add(part("leg", "3.5", "tray-2")));
+        assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM event_outbox", Integer.class));
         mvc.perform(get("/trays/tray-2")).andExpect(jsonPath("$.currentWeight").value(10)).andExpect(jsonPath("$.parts.length()").value(2));
     }
     @Test void unknownAndDuplicateTrays() throws Exception {

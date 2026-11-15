@@ -21,13 +21,18 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = "chopshop.outbox.delay=3600000")
 @AutoConfigureMockMvc
 @Testcontainers
 class PackagingServiceIntegrationTest {
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:18-alpine")
             .withDatabaseName("packaging").withUsername("packaging").withPassword("packaging");
+
+    @Container
+    static final org.testcontainers.containers.GenericContainer<?> RABBIT =
+            new org.testcontainers.containers.GenericContainer<>("rabbitmq:4-management").withExposedPorts(5672)
+                .waitingFor(org.testcontainers.containers.wait.strategy.Wait.forLogMessage(".*Server startup complete.*\\n", 1));
 
     @DynamicPropertySource
     static void database(DynamicPropertyRegistry registry) {
@@ -42,6 +47,7 @@ class PackagingServiceIntegrationTest {
 
     @BeforeEach
     void clear() {
+        jdbc.update("DELETE FROM event_outbox");
         jdbc.update("DELETE FROM product_trays");
         jdbc.update("DELETE FROM products");
     }
@@ -64,6 +70,30 @@ class PackagingServiceIntegrationTest {
                 .andExpect(jsonPath("$.trayRfids[1]").value("TRAY-B"));
         assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM products WHERE id = ?", Integer.class, id));
         assertEquals(2, jdbc.queryForObject("SELECT COUNT(*) FROM product_trays WHERE product_id = ?", Integer.class, id));
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM event_outbox WHERE event_type = ? AND payload::jsonb ->> 'productId' = ?", Integer.class, "product.created", id.toString()));
+    }
+
+    @Test
+    void outboxRetriesAfterBrokerOutageAndPublishesPersistentMessage() throws Exception {
+        mvc.perform(post("/products").contentType(APPLICATION_JSON)
+                .content("{\"productType\":\"legs\",\"trayRfids\":[\"retry-tray\"]}"))
+                .andExpect(status().isCreated());
+        var unavailable = new dk.dsy1.chopshop.packaging.messaging.Outbox(jdbc, "127.0.0.1", 1, "guest", "guest");
+        unavailable.publishPending();
+        assertEquals(1, jdbc.queryForObject("SELECT COUNT(*) FROM event_outbox", Integer.class));
+        var available = new dk.dsy1.chopshop.packaging.messaging.Outbox(jdbc, RABBIT.getHost(), RABBIT.getMappedPort(5672), "guest", "guest");
+        available.publishPending();
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM event_outbox", Integer.class));
+        var factory = new com.rabbitmq.client.ConnectionFactory();
+        factory.setHost(RABBIT.getHost()); factory.setPort(RABBIT.getMappedPort(5672));
+        try (var connection = factory.newConnection(); var channel = connection.createChannel()) {
+            var message = channel.basicGet("chopshop.traceability", false);
+            assertNotNull(message);
+            assertEquals("product.created", message.getProps().getType());
+            assertEquals(2, message.getProps().getDeliveryMode());
+            assertTrue(new String(message.getBody(), java.nio.charset.StandardCharsets.UTF_8).contains("retry-tray"));
+            channel.basicAck(message.getEnvelope().getDeliveryTag(), false);
+        }
     }
 
     @Test
@@ -95,6 +125,7 @@ class PackagingServiceIntegrationTest {
         for (String body : invalid) {
             mvc.perform(post("/products").contentType(APPLICATION_JSON).content(body)).andExpect(status().isBadRequest());
         }
+        assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM event_outbox", Integer.class));
         assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM products", Integer.class));
         assertEquals(0, jdbc.queryForObject("SELECT COUNT(*) FROM product_trays", Integer.class));
     }

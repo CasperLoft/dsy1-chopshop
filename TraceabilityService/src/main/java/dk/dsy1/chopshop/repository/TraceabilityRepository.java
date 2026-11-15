@@ -14,8 +14,8 @@ import java.util.UUID;
 
 /** Executes the JDBC queries that traverse product, tray, part, and animal data. */
 public final class TraceabilityRepository {
-    private static final String PRODUCT_EXISTS_SQL = "SELECT 1 FROM products WHERE id = ?";
-    private static final String ANIMAL_EXISTS_SQL = "SELECT 1 FROM animals WHERE ear_tag = ?";
+    private static final String PRODUCT_EXISTS_SQL = "SELECT 1 FROM products WHERE id = ? UNION SELECT 1 FROM event_products WHERE id = ?";
+    private static final String ANIMAL_EXISTS_SQL = "SELECT 1 FROM animals WHERE ear_tag = ? UNION SELECT 1 FROM event_animals WHERE ear_tag = ?";
 
     private static final String ANIMALS_FOR_PRODUCT_SQL = """
             SELECT DISTINCT a.ear_tag
@@ -24,7 +24,12 @@ public final class TraceabilityRepository {
             JOIN animal_parts ap ON ap.id = tp.animal_part_id
             JOIN animals a ON a.id = ap.animal_id
             WHERE pt.product_id = ?
-            ORDER BY a.ear_tag
+            UNION
+            SELECT a.ear_tag FROM event_product_trays pt
+            JOIN event_parts ap ON ap.tray_rfid = pt.tray_rfid
+            JOIN event_animals a ON a.id = ap.animal_id
+            WHERE pt.product_id = ?
+            ORDER BY ear_tag
             """;
 
     private static final String PRODUCTS_FOR_ANIMAL_SQL = """
@@ -35,7 +40,13 @@ public final class TraceabilityRepository {
             JOIN product_trays pt ON pt.tray_id = tp.tray_id
             JOIN products p ON p.id = pt.product_id
             WHERE a.ear_tag = ?
-            ORDER BY p.id
+            UNION
+            SELECT p.id, p.product_type FROM event_animals a
+            JOIN event_parts ap ON ap.animal_id = a.id
+            JOIN event_product_trays pt ON pt.tray_rfid = ap.tray_rfid
+            JOIN event_products p ON p.id = pt.product_id
+            WHERE a.ear_tag = ?
+            ORDER BY id
             """;
 
     private final ConnectionProvider connectionProvider;
@@ -53,6 +64,7 @@ public final class TraceabilityRepository {
             List<String> earTags = new ArrayList<>();
             try (PreparedStatement statement = connection.prepareStatement(ANIMALS_FOR_PRODUCT_SQL)) {
                 statement.setObject(1, productId);
+                statement.setObject(2, productId);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         earTags.add(resultSet.getString("ear_tag"));
@@ -72,6 +84,7 @@ public final class TraceabilityRepository {
             List<Product> products = new ArrayList<>();
             try (PreparedStatement statement = connection.prepareStatement(PRODUCTS_FOR_ANIMAL_SQL)) {
                 statement.setString(1, earTag);
+                statement.setString(2, earTag);
                 try (ResultSet resultSet = statement.executeQuery()) {
                     while (resultSet.next()) {
                         products.add(new Product(
@@ -88,6 +101,7 @@ public final class TraceabilityRepository {
     private boolean exists(Connection connection, String sql, Object value) throws SQLException {
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
             statement.setObject(1, value);
+            statement.setObject(2, value);
             try (ResultSet resultSet = statement.executeQuery()) {
                 return resultSet.next();
             }

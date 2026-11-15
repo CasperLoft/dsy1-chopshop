@@ -23,7 +23,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-@SpringBootTest
+@SpringBootTest(properties = "chopshop.outbox.delay=3600000")
 @AutoConfigureMockMvc
 @Testcontainers
 class RegistrationServiceIntegrationTest {
@@ -52,6 +52,7 @@ class RegistrationServiceIntegrationTest {
 
     @BeforeEach
     void clearRegistrations() {
+        jdbcTemplate.update("DELETE FROM event_outbox");
         jdbcTemplate.update("DELETE FROM animals");
     }
 
@@ -75,6 +76,7 @@ class RegistrationServiceIntegrationTest {
                 "SELECT COUNT(*) FROM animals WHERE ear_tag = ?", Integer.class, "DK-POST-001"
         );
         org.junit.jupiter.api.Assertions.assertEquals(1, savedCount);
+        org.junit.jupiter.api.Assertions.assertEquals(1, jdbcTemplate.queryForObject("SELECT COUNT(*) FROM event_outbox WHERE event_type = ? AND payload::jsonb ->> 'earTag' = ?", Integer.class, "animal.registered", "DK-POST-001"));
     }
 
     @Test

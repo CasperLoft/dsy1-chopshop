@@ -12,3 +12,8 @@ CREATE TABLE IF NOT EXISTS animal_parts (
     tray_id UUID NOT NULL REFERENCES trays(id)
 );
 CREATE INDEX IF NOT EXISTS animal_parts_tray_id_idx ON animal_parts(tray_id);
+
+CREATE TABLE IF NOT EXISTS event_outbox (
+    id UUID PRIMARY KEY, event_type VARCHAR(40) NOT NULL, payload TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

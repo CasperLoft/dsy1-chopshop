@@ -37,6 +37,11 @@ class TraceabilityServiceIntegrationTest {
             .withUsername("chopshop")
             .withPassword("chopshop");
 
+    @Container
+    private static final org.testcontainers.containers.GenericContainer<?> RABBIT =
+            new org.testcontainers.containers.GenericContainer<>("rabbitmq:4-management").withExposedPorts(5672)
+                .waitingFor(org.testcontainers.containers.wait.strategy.Wait.forLogMessage(".*Server startup complete.*\\n", 1));
+
     private static Server server;
     private static ManagedChannel channel;
     private static TraceabilityServiceGrpc.TraceabilityServiceBlockingStub client;
@@ -67,6 +72,63 @@ class TraceabilityServiceIntegrationTest {
         if (server != null) {
             server.shutdownNow();
         }
+    }
+
+    @Test
+    void consumesRabbitEventsAndAnswersRecallQueries() throws Exception {
+        String animal = UUID.randomUUID().toString(), part = UUID.randomUUID().toString(), product = UUID.randomUUID().toString();
+        String tray = "rabbit-" + UUID.randomUUID(), earTag = "rabbit-" + UUID.randomUUID();
+        var factory = new com.rabbitmq.client.ConnectionFactory();
+        factory.setHost(RABBIT.getHost()); factory.setPort(RABBIT.getMappedPort(5672));
+        try (var connection = factory.newConnection(); var channel = connection.createChannel();
+             var consumer = new dk.dsy1.chopshop.messaging.TraceabilityConsumer(() -> POSTGRES.createConnection(""), RABBIT.getHost(), RABBIT.getMappedPort(5672), "guest", "guest")) {
+            channel.exchangeDeclare("chopshop.events", "direct", true);
+            channel.queueDeclare("chopshop.traceability", true, false, false, null);
+            channel.queueBind("chopshop.traceability", "chopshop.events", "traceability");
+            consumer.start();
+            String[] types = {"product.created", "part.registered", "animal.registered"};
+            String[] bodies = {
+                "{\"productId\":\"" + product + "\",\"productType\":\"cuts\",\"trayRfids\":[\"" + tray + "\"]}",
+                "{\"partId\":\"" + part + "\",\"animalId\":\"" + animal + "\",\"trayRfid\":\"" + tray + "\"}",
+                "{\"animalId\":\"" + animal + "\",\"earTag\":\"" + earTag + "\"}"};
+            for (int i = 0; i < types.length; i++) {
+                var props = new com.rabbitmq.client.AMQP.BasicProperties.Builder().type(types[i]).deliveryMode(2).build();
+                channel.basicPublish("chopshop.events", "traceability", props, bodies[i].getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+            long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(20);
+            java.util.List<String> animals = java.util.List.of();
+            while (System.nanoTime() < deadline) {
+                try { animals = client.getAnimalsForProduct(ProductRequest.newBuilder().setProductId(product).build())
+                        .getAnimalsList().stream().map(AnimalResponse::getEarTag).toList(); }
+                catch (StatusRuntimeException ignored) { }
+                if (animals.contains(earTag)) break;
+                Thread.sleep(100);
+            }
+            assertIterableEquals(java.util.List.of(earTag), animals);
+            assertIterableEquals(java.util.List.of(product), client.getProductsForAnimal(AnimalRequest.newBuilder().setEarTag(earTag).build())
+                    .getProductsList().stream().map(ProductResponse::getProductId).toList());
+        }
+    }
+
+    @Test
+    void eventsAreIdempotentAndCanArriveOutOfOrder() throws Exception {
+        var consumer = new dk.dsy1.chopshop.messaging.TraceabilityConsumer(() -> POSTGRES.createConnection(""));
+        String animal = UUID.randomUUID().toString();
+        String part = UUID.randomUUID().toString();
+        String product = UUID.randomUUID().toString();
+        String productEvent = "{\"productId\":\"" + product + "\",\"productType\":\"cuts\",\"trayRfids\":[\"event-tray\"]}";
+        String partEvent = "{\"partId\":\"" + part + "\",\"animalId\":\"" + animal + "\",\"trayRfid\":\"event-tray\"}";
+        String animalEvent = "{\"animalId\":\"" + animal + "\",\"earTag\":\"event-ear-tag\"}";
+        consumer.apply("product.created", productEvent);
+        consumer.apply("part.registered", partEvent);
+        consumer.apply("animal.registered", animalEvent);
+        consumer.apply("product.created", productEvent);
+        consumer.apply("part.registered", partEvent);
+        consumer.apply("animal.registered", animalEvent);
+        assertIterableEquals(java.util.List.of("event-ear-tag"), client.getAnimalsForProduct(
+                ProductRequest.newBuilder().setProductId(product).build()).getAnimalsList().stream().map(AnimalResponse::getEarTag).toList());
+        assertIterableEquals(java.util.List.of(product), client.getProductsForAnimal(
+                AnimalRequest.newBuilder().setEarTag("event-ear-tag").build()).getProductsList().stream().map(ProductResponse::getProductId).toList());
     }
 
     @Test

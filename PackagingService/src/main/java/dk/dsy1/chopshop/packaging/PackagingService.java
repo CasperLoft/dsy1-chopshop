@@ -12,9 +12,11 @@ import java.util.UUID;
 @Service
 public class PackagingService {
     private final ProductRepository products;
+    private final dk.dsy1.chopshop.packaging.messaging.Outbox outbox;
 
-    public PackagingService(ProductRepository products) {
+    public PackagingService(ProductRepository products, dk.dsy1.chopshop.packaging.messaging.Outbox outbox) {
         this.products = products;
+        this.outbox = outbox;
     }
 
     public record CreateProduct(String productType, List<String> trayRfids) {}
@@ -29,6 +31,7 @@ public class PackagingService {
         }
         Product saved = products.save(new Product(UUID.randomUUID(), request.productType(),
                 new LinkedHashSet<>(request.trayRfids())));
+        outbox.add("product.created", java.util.Map.of("productId", saved.getId().toString(), "productType", saved.getProductType(), "trayRfids", saved.getTrayRfids()));
         return view(saved);
     }
 
