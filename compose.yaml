@@ -22,6 +22,32 @@ services:
     volumes:
       - registration_postgres_data:/var/lib/postgresql
 
+  processing-postgres:
+    image: postgres:18-alpine
+    container_name: chopshop-processing-postgres
+    environment:
+      POSTGRES_DB: processing
+      POSTGRES_USER: processing
+      POSTGRES_PASSWORD: processing
+    ports:
+      - "5435:5432"
+    volumes:
+      - processing_postgres_data:/var/lib/postgresql
+
+  packaging-postgres:
+    image: postgres:18-alpine
+    container_name: chopshop-packaging-postgres
+    environment:
+      POSTGRES_DB: packaging
+      POSTGRES_USER: packaging
+      POSTGRES_PASSWORD: packaging
+    ports:
+      - "5436:5432"
+    volumes:
+      - packaging_postgres_data:/var/lib/postgresql
+
 volumes:
   chopshop_postgres_data:
   registration_postgres_data:
+  processing_postgres_data:
+  packaging_postgres_data:
