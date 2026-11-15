@@ -142,6 +142,7 @@ class TraceabilityServiceIntegrationTest {
                 .header("Origin", "http://localhost:8000").GET().build();
         var productResponse = httpClient.send(productRequest, java.net.http.HttpResponse.BodyHandlers.ofString());
         assertEquals(200, productResponse.statusCode());
+        assertEquals(200, getHttp(httpClient, "/health", "http://localhost:8000").statusCode());
         assertEquals("http://localhost:8000", productResponse.headers().firstValue("Access-Control-Allow-Origin").orElseThrow());
         var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
         var animals = mapper.readTree(productResponse.body()).get("animals");
@@ -154,6 +155,20 @@ class TraceabilityServiceIntegrationTest {
         assertEquals(400, getHttp(httpClient, "/traceability/products?earTag=%20", null).statusCode());
         assertEquals(404, getHttp(httpClient, "/traceability/products?earTag=NOT-FOUND", null).statusCode());
         assertEquals(403, getHttp(httpClient, "/traceability/products?earTag=DK-A1001", "http://example.com").statusCode());
+    }
+
+    @Test
+    void dashboardHealthReportsDatabaseFailure() throws Exception {
+        ConnectionProvider failed = () -> { throw new java.sql.SQLException("offline"); };
+        var query = new TraceabilityQueryService(new TraceabilityRepository(failed));
+        try (var unavailableHttp = new dk.dsy1.chopshop.http.TraceabilityHttpServer(query, 0)) {
+            unavailableHttp.start();
+            var request = java.net.http.HttpRequest.newBuilder(java.net.URI.create("http://127.0.0.1:" + unavailableHttp.port() + "/health"))
+                    .header("Origin", "http://localhost:8000").GET().build();
+            var response = java.net.http.HttpClient.newHttpClient().send(request, java.net.http.HttpResponse.BodyHandlers.ofString());
+            assertEquals(503, response.statusCode());
+            assertEquals("degraded", new com.fasterxml.jackson.databind.ObjectMapper().readTree(response.body()).get("status").asText());
+        }
     }
 
     @Test

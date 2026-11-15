@@ -53,6 +53,15 @@ class PackagingServiceIntegrationTest {
     }
 
     @Test
+    void healthReportsAnAvailableDatabaseToDashboard() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/health")
+                .header("Origin", "http://localhost:8000"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("available"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Origin", "http://localhost:8000"));
+    }
+
+    @Test
     void dashboardOriginIsAllowedButOtherOriginsAreRejected() throws Exception {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/products")
                 .header("Origin", "http://localhost:8000")

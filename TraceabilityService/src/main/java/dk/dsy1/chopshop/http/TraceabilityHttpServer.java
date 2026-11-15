@@ -25,6 +25,7 @@ public final class TraceabilityHttpServer implements AutoCloseable {
         this.queries = queries;
         server = HttpServer.create(new InetSocketAddress("127.0.0.1", port), 0);
         server.createContext("/traceability/", this::handle);
+        server.createContext("/health", this::handle);
     }
     public void start() { server.start(); }
     public int port() { return server.getAddress().getPort(); }
@@ -46,7 +47,10 @@ public final class TraceabilityHttpServer implements AutoCloseable {
             }
             try {
                 String path = exchange.getRequestURI().getPath();
-                if (path.equals("/traceability/products")) {
+                if (path.equals("/health")) {
+                    queries.checkDatabase();
+                    send(exchange, 200, Map.of("status", "available"));
+                } else if (path.equals("/traceability/products")) {
                     String earTag = parameter(exchange, "earTag");
                     send(exchange, 200, Map.of("products", queries.findProductsForAnimal(earTag)));
                 } else if (path.equals("/traceability/animals")) {
@@ -60,7 +64,7 @@ public final class TraceabilityHttpServer implements AutoCloseable {
             } catch (TraceabilityNotFoundException e) {
                 send(exchange, 404, Map.of("error", e.getMessage()));
             } catch (TraceabilityDataAccessException e) {
-                send(exchange, 503, Map.of("error", "Traceability data is unavailable"));
+                send(exchange, 503, Map.of("status", "degraded", "error", "Traceability data is unavailable"));
             }
         }
     }

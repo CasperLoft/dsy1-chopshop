@@ -46,6 +46,15 @@ class ProcessingServiceIntegrationTest {
         return mvc.perform(post("/parts").contentType(APPLICATION_JSON).content(content)).andReturn().getResponse().getStatus();
     }
     @Test
+    void healthReportsAnAvailableDatabaseToDashboard() throws Exception {
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get("/health")
+                .header("Origin", "http://localhost:8000"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("available"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header().string("Access-Control-Allow-Origin", "http://localhost:8000"));
+    }
+
+    @Test
     void dashboardOriginIsAllowedButOtherOriginsAreRejected() throws Exception {
         mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options("/parts")
                 .header("Origin", "http://localhost:8000")

@@ -15,6 +15,11 @@ public final class TraceabilityQueryService {
         this.repository = repository;
     }
 
+    public void checkDatabase() {
+        try { repository.checkDatabase(); }
+        catch (SQLException e) { throw new TraceabilityDataAccessException(e); }
+    }
+
     public List<String> findAnimalsForProduct(UUID productId) {
         try {
             return repository.findAnimalEarTagsForProduct(productId)

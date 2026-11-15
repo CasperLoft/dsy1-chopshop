@@ -34,3 +34,7 @@ bin/
 .DS_Store
 # Generated local Traceability classpath
 /TraceabilityService/cp.txt
+
+# Python bytecode
+__pycache__/
+*.pyc

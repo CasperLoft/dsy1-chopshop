@@ -15,6 +15,17 @@
   </header>
   <main id="top">
     <div class="intro"><div><div class="eyebrow"><span></span> SLAUGHTERHOUSE OPERATIONS <span class="slash">/</span> LIVE DEMO</div><h1>From arrival<br><em>to distribution.</em></h1><p>Follow an animal through each station. Register the arrival, process its parts, and package the finished product.</p></div></div>
+    <section class="service-status" aria-label="Service status">
+      <div class="status-heading"><div><span class="station-kicker">LOCAL SYSTEM</span><h2>Service status</h2></div><span class="status-refresh">Updates every 5 seconds</span></div>
+      <div class="status-grid">
+        <div class="status-item" data-service="registration"><span>Registration</span><strong class="status-value">Checking</strong></div>
+        <div class="status-item" data-service="processing"><span>Processing</span><strong class="status-value">Checking</strong></div>
+        <div class="status-item" data-service="packaging"><span>Packaging</span><strong class="status-value">Checking</strong></div>
+        <div class="status-item" data-service="traceability"><span>Traceability</span><strong class="status-value">Checking</strong></div>
+        <div class="status-item" data-service="rabbitmq"><span>RabbitMQ <small>(port)</small></span><strong class="status-value">Checking</strong></div>
+      </div>
+      <p>Application status includes its database. RabbitMQ shows port reachability only.</p>
+    </section>
     <nav class="tabs" role="tablist" aria-label="Dashboard views">
       <button id="station-tab" role="tab" aria-selected="true" aria-controls="station-panel" tabindex="0" type="button">Station Flow</button>
       <button id="trace-tab" role="tab" aria-selected="false" aria-controls="trace-panel" tabindex="-1" type="button">Traceability</button>

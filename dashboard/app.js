@@ -250,3 +250,42 @@ $('#reset').addEventListener('click', () => {
   updateTraceOptions();
 });
 updateTraceOptions();
+
+
+// Status checks are read-only and run independently of station forms.
+const healthEndpoints = {
+  registration: 'http://localhost:8081/health',
+  processing: 'http://localhost:8082/health',
+  packaging: 'http://localhost:8083/health',
+  traceability: 'http://localhost:8084/health'
+};
+function showStatus(name, status, label) {
+  const item = document.querySelector(`[data-service="${name}"]`);
+  item.dataset.status = status;
+  item.querySelector('.status-value').textContent = label;
+}
+async function timedFetch(url) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try { return await fetch(url, { cache: 'no-store', signal: controller.signal }); }
+  finally { clearTimeout(timer); }
+}
+async function refreshStatus() {
+  await Promise.all(Object.entries(healthEndpoints).map(async ([name, url]) => {
+    try {
+      const response = await timedFetch(url);
+      if (response.ok) showStatus(name, 'available', 'Available');
+      else if (response.status === 503) showStatus(name, 'degraded', 'Degraded');
+      else showStatus(name, 'unavailable', 'Unavailable');
+    } catch (_) { showStatus(name, 'unavailable', 'Unavailable'); }
+  }).concat((async () => {
+    try {
+      const response = await timedFetch('/api/status/rabbitmq');
+      if (!response.ok) throw new Error('Status endpoint unavailable');
+      const result = await response.json();
+      showStatus('rabbitmq', result.reachable ? 'available' : 'unavailable', result.reachable ? 'Reachable' : 'Unreachable');
+    } catch (_) { showStatus('rabbitmq', 'unavailable', 'Status unavailable'); }
+  })()));
+}
+refreshStatus();
+setInterval(refreshStatus, 5000);

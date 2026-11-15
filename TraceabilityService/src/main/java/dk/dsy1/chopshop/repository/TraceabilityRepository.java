@@ -55,6 +55,13 @@ public final class TraceabilityRepository {
         this.connectionProvider = connectionProvider;
     }
 
+    public void checkDatabase() throws SQLException {
+        try (Connection connection = connectionProvider.getConnection();
+             PreparedStatement statement = connection.prepareStatement("SELECT 1")) {
+            statement.execute();
+        }
+    }
+
     public Optional<List<String>> findAnimalEarTagsForProduct(UUID productId) throws SQLException {
         try (Connection connection = connectionProvider.getConnection()) {
             if (!exists(connection, PRODUCT_EXISTS_SQL, productId)) {
