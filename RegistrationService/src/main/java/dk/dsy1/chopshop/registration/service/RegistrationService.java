@@ -1,8 +1,9 @@
 package dk.dsy1.chopshop.registration.service;
 
 import dk.dsy1.chopshop.registration.dto.RegistrationRequest;
-import dk.dsy1.chopshop.registration.domain.AnimalRegistration;
+import dk.dsy1.chopshop.registration.persistence.AnimalRegistrationEntity;
 import dk.dsy1.chopshop.registration.repository.AnimalRegistrationRepository;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -19,9 +20,9 @@ public class RegistrationService
     this.repository = repository;
   }
 
-  public AnimalRegistration registerAnimal(RegistrationRequest request)
+  public AnimalRegistrationEntity registerAnimal(RegistrationRequest request)
   {
-    AnimalRegistration animal = new AnimalRegistration(
+    AnimalRegistrationEntity animal = new AnimalRegistrationEntity(
         UUID.randomUUID(),
         request.earTag(),
         request.arrivalDate(),
@@ -29,23 +30,22 @@ public class RegistrationService
         request.origin()
     );
 
-    repository.save(animal);
-
-    return animal;
+    return repository.save(animal);
   }
 
-  public AnimalRegistration getByEarTag(String earTag)
+  public AnimalRegistrationEntity getByEarTag(String earTag)
   {
-    return repository.getByEarTag(earTag);
+    return repository.getByEarTag(earTag)
+        .orElseThrow(() -> new EmptyResultDataAccessException(1));
   }
 
-  public List<AnimalRegistration> getAllByArrivalDate(LocalDate arrivalDate)
+  public List<AnimalRegistrationEntity> getAllByArrivalDate(LocalDate arrivalDate)
   {
-    return repository.getAllByArrivalDate(arrivalDate);
+    return repository.getAllByArrivalDateOrderByEarTag(arrivalDate);
   }
 
-  public List<AnimalRegistration> getAllByOrigin(String origin)
+  public List<AnimalRegistrationEntity> getAllByOrigin(String origin)
   {
-    return repository.getAllByOrigin(origin);
+    return repository.getAllByOriginOrderByEarTag(origin);
   }
 }

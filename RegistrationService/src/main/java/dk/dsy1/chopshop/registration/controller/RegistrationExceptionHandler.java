@@ -1,6 +1,6 @@
 package dk.dsy1.chopshop.registration.controller;
 
-import org.springframework.dao.DuplicateKeyException;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -15,8 +15,9 @@ public class RegistrationExceptionHandler {
     void registrationNotFound() {
     }
 
-    @ExceptionHandler(DuplicateKeyException.class)
+    // All integrity violations map to 409, including constraints other than duplicate ear tags.
+    @ExceptionHandler(DataIntegrityViolationException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    void duplicateEarTag() {
+    void registrationConflict() {
     }
 }

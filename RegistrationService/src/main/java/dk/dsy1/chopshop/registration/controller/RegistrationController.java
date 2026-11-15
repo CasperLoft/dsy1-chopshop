@@ -1,7 +1,7 @@
 package dk.dsy1.chopshop.registration.controller;
 
-import dk.dsy1.chopshop.registration.domain.AnimalRegistration;
 import dk.dsy1.chopshop.registration.dto.RegistrationRequest;
+import dk.dsy1.chopshop.registration.persistence.AnimalRegistrationEntity;
 import dk.dsy1.chopshop.registration.service.RegistrationService;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
@@ -22,25 +22,25 @@ public class RegistrationController
 
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
-  public AnimalRegistration registerAnimal(@RequestBody RegistrationRequest request)
+  public AnimalRegistrationEntity registerAnimal(@RequestBody RegistrationRequest request)
   {
     return registrationService.registerAnimal(request);
   }
 
   @GetMapping("/{earTag}")
-  public AnimalRegistration getByEarTag(@PathVariable String earTag)
+  public AnimalRegistrationEntity getByEarTag(@PathVariable String earTag)
   {
     return registrationService.getByEarTag(earTag);
   }
 
   @GetMapping(params = "arrivalDate")
-  public List<AnimalRegistration> getAllByArrivalDate(@RequestParam("arrivalDate") LocalDate arrivalDate)
+  public List<AnimalRegistrationEntity> getAllByArrivalDate(@RequestParam("arrivalDate") LocalDate arrivalDate)
   {
     return registrationService.getAllByArrivalDate(arrivalDate);
   }
 
   @GetMapping(params = "origin")
-  public List<AnimalRegistration> getAllByOrigin(@RequestParam("origin") String origin)
+  public List<AnimalRegistrationEntity> getAllByOrigin(@RequestParam("origin") String origin)
   {
     return registrationService.getAllByOrigin(origin);
   }
