@@ -80,7 +80,7 @@ The stations retry delivery, normally within five seconds. Traceability consumes
 
 ## Traceability and system behavior
 
-In Kreya, connect to `localhost:9090` and call `GetAnimalsForProduct` with a product UUID or `GetProductsForAnimal` with an ear tag. See the [Kreya instructions](docs/Kreya/readme.md) and [container diagram](docs/assignments/assignment-04/container-diagram.puml).
+In Kreya, connect to `localhost:9090` and call `GetAnimalsForProduct` with a product UUID or `GetProductsForAnimal` with an ear tag. See the [Kreya instructions](docs/Kreya/readme.md) and [container diagram](docs/assignments/assignment-04/C2_container_diagram_V4.svg).
 
 Station operations and their outgoing events are saved together in an outbox. RabbitMQ delivers persistent messages, and Traceability handles duplicate or out-of-order deliveries. Results are **eventually consistent**: a new record may briefly be missing or incomplete while events are in transit. Recall is based on source trays, so it can include animals whose parts were in a tray but were not used in a particular product. Stations accept animal IDs and tray RFIDs without checking other services synchronously.
 
