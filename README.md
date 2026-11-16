@@ -39,6 +39,12 @@ mvn -f ProcessingService/pom.xml spring-boot:run
 mvn -f PackagingService/pom.xml spring-boot:run
 ```
 
+For a **fresh** Traceability database, initialize its schema once before starting Traceability:
+
+```bash
+docker compose exec -T traceability-postgres psql -U chopshop -d chopshop < database/schema.sql
+```
+
 In another terminal, start Traceability:
 
 ```bash
@@ -52,12 +58,6 @@ Start the dashboard in another terminal from the repository root:
 
 ```bash
 python3 scripts/dashboard_server.py
-```
-
-For a **fresh** Traceability database, initialize its schema once before starting Traceability:
-
-```bash
-docker compose exec -T traceability-postgres psql -U chopshop -d chopshop < database/schema.sql
 ```
 
 ## Demonstrate RabbitMQ and recovery
@@ -82,7 +82,7 @@ The stations retry delivery, normally within five seconds. Traceability consumes
 
 In Kreya, connect to `localhost:9090` and call `GetAnimalsForProduct` with a product UUID or `GetProductsForAnimal` with an ear tag. See the [Kreya instructions](docs/Kreya/readme.md) and [container diagram](docs/assignments/assignment-04/C2_container_diagram_V4.svg).
 
-Station operations and their outgoing events are saved together in an outbox. RabbitMQ delivers persistent messages, and Traceability handles duplicate or out-of-order deliveries. Results are **eventually consistent**: a new record may briefly be missing or incomplete while events are in transit. Recall is based on source trays, so it can include animals whose parts were in a tray but were not used in a particular product. Stations accept animal IDs and tray RFIDs without checking other services synchronously.
+Station operations and their outgoing events are saved together in an outbox. RabbitMQ delivers persistent messages, and Traceability handles duplicate or out-of-order deliveries. Results are **eventually consistent**: a new record may briefly be missing or incomplete while events are in transit. Recall is based on source trays, so it can include animals whose parts were in a tray but were not used in a particular product. Stations accept animal IDs and tray RFIDs without checking other services synchronously. Packaging records a product type and source tray references; it does not track quantities or verify that a “half animal” includes all expected parts.
 
 ## Tests and shutdown
 
